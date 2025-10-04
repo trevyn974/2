@@ -260,10 +260,10 @@
                 <h3>📋 How to Use:</h3>
                 <ol>
                     <li>Go to any TikTok profile page (e.g., @username)</li>
-                    <li>Open browser Developer Tools (F12)</li>
-                    <li>Go to Console tab</li>
-                    <li>Copy and paste the code below, then press Enter</li>
-                    <li>Or click "Extract Songs" if you're already on TikTok</li>
+                    <li>Click "Copy Bookmarklet" and drag it to your bookmarks bar</li>
+                    <li>On the TikTok profile, click the bookmarklet to extract songs</li>
+                    <li>Alternatively, open Developer Tools (F12), go to Console, paste the script, and press Enter</li>
+                    <li>Click "Extract Songs" if already on TikTok</li>
                 </ol>
             </div>
             
@@ -286,10 +286,17 @@
     <script>
         // TikTok Song Extractor Script
         function extractSongs() {
-            const statusDiv = document.getElementById('status');
-            const resultsDiv = document.getElementById('results');
-            const songListDiv = document.getElementById('songList');
-            const statsDiv = document.getElementById('stats');
+            const statusDiv = document.getElementById('status') || document.createElement('div');
+            const resultsDiv = document.getElementById('results') || document.createElement('div');
+            const songListDiv = document.getElementById('songList') || document.createElement('div');
+            const statsDiv = document.getElementById('stats') || document.createElement('div');
+            
+            // Ensure elements are properly set up for bookmarklet
+            if (!statusDiv.id) statusDiv.id = 'status';
+            if (!resultsDiv.id) resultsDiv.id = 'results';
+            if (!songListDiv.id) songListDiv.id = 'songList';
+            if (!statsDiv.id) statsDiv.id = 'stats';
+            resultsDiv.classList.add('hidden');
             
             // Check if we're on TikTok
             if (!window.location.hostname.includes('tiktok.com')) {
@@ -298,14 +305,13 @@
             }
             
             statusDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Extracting songs from profile...</div>';
-            resultsDiv.classList.add('hidden');
             
             setTimeout(() => {
                 try {
                     const songs = extractSongData();
                     
                     if (songs.length === 0) {
-                        statusDiv.innerHTML = '<div class="error">❌ No songs found. Make sure you\'re on a TikTok profile page with videos.</div>';
+                        statusDiv.innerHTML = '<div class="error">❌ No songs found. Make sure you\'re on a TikTok profile page with videos. Scroll to load more videos if needed.</div>';
                         return;
                     }
                     
@@ -325,7 +331,6 @@
             songElements.forEach(element => {
                 const songText = element.textContent || element.innerText;
                 if (songText && songText.trim()) {
-                    // Parse song name and artist
                     const parts = songText.split(' - ');
                     const songName = parts[0]?.trim();
                     const artist = parts[1]?.trim() || 'Unknown Artist';
@@ -345,7 +350,7 @@
                 }
             });
             
-            // Also try alternative selectors
+            // Alternative selectors for robustness
             const altElements = document.querySelectorAll('[class*="music"], [class*="song"], [data-testid*="music"]');
             altElements.forEach(element => {
                 const songText = element.textContent || element.innerText;
@@ -376,9 +381,24 @@
             const resultsDiv = document.getElementById('results');
             const songListDiv = document.getElementById('songList');
             const statsDiv = document.getElementById('stats');
-            const copyAllBtn = document.getElementById('copyAllBtn');
+            const copyAllBtn = document.getElementById('copyAllBtn') || document.createElement('button');
             
-            // Store songs globally for copying
+            // Ensure copy button is set up
+            if (!copyAllBtn.id) {
+                copyAllBtn.id = 'copyAllBtn';
+                copyAllBtn.textContent = 'Copy All Songs';
+                copyAllBtn.style.marginTop = '10px';
+                copyAllBtn.style.padding = '10px';
+                copyAllBtn.style.background = '#ff0050';
+                copyAllBtn.style.color = 'white';
+                copyAllBtn.style.border = 'none';
+                copyAllBtn.style.borderRadius = '5px';
+                copyAllBtn.style.cursor = 'pointer';
+                copyAllBtn.onclick = copyAllSongs;
+                resultsDiv.appendChild(copyAllBtn);
+            }
+            
+            // Store songs globally
             window.extractedSongs = songs;
             
             // Display stats
@@ -412,14 +432,15 @@
                 </div>
             `).join('');
             
-            // Show copy all button
+            // Show results
             copyAllBtn.style.display = 'block';
             resultsDiv.classList.remove('hidden');
         }
         
         function copyAllSongs() {
+            const statusDiv = document.getElementById('status');
             if (!window.extractedSongs || window.extractedSongs.length === 0) {
-                document.getElementById('status').innerHTML = '<div class="error">❌ No songs to copy! Extract songs first.</div>';
+                statusDiv.innerHTML = '<div class="error">❌ No songs to copy! Extract songs first.</div>';
                 return;
             }
             
@@ -431,15 +452,12 @@
             formattedText += `📊 Total: ${songs.length} unique songs\n`;
             formattedText += `🎶 Total uses: ${songs.reduce((sum, song) => sum + song.count, 0)}\n\n`;
             
-            // Add songs list
             formattedText += '📋 Song List:\n';
             formattedText += '='.repeat(50) + '\n';
-            
             songs.forEach((song, index) => {
                 formattedText += `${index + 1}. ${song.name} - ${song.artist} (${song.count}x)\n`;
             });
             
-            // Add separator and alternative formats
             formattedText += '\n' + '='.repeat(50) + '\n';
             formattedText += '📝 Just Song Names:\n';
             songs.forEach(song => {
@@ -455,9 +473,8 @@
             
             // Copy to clipboard
             navigator.clipboard.writeText(formattedText).then(() => {
-                document.getElementById('status').innerHTML = '<div class="success">✅ All songs copied to clipboard! You can paste them anywhere now.</div>';
+                statusDiv.innerHTML = '<div class="success">✅ All songs copied to clipboard! You can paste them anywhere now.</div>';
             }).catch(() => {
-                // Fallback for older browsers
                 const textArea = document.createElement('textarea');
                 textArea.value = formattedText;
                 textArea.style.position = 'fixed';
@@ -468,59 +485,93 @@
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                document.getElementById('status').innerHTML = '<div class="success">✅ All songs copied to clipboard! You can paste them anywhere now.</div>';
+                statusDiv.innerHTML = '<div class="success">✅ All songs copied to clipboard! You can paste them anywhere now.</div>';
             });
         }
         
         function getProfileName() {
-            // Try to get profile name from URL or page
             const url = window.location.href;
             const match = url.match(/@([^\/\?]+)/);
-            if (match) {
-                return '@' + match[1];
-            }
+            if (match) return '@' + match[1];
             
-            // Try to get from page title
             const title = document.title;
             if (title.includes('@')) {
                 const titleMatch = title.match(/@([^\s]+)/);
-                if (titleMatch) {
-                    return '@' + titleMatch[1];
-                }
+                if (titleMatch) return '@' + titleMatch[1];
             }
             
             return 'this TikTok profile';
         }
         
         function copyBookmarklet() {
-            const bookmarklet = `javascript:(function(){
-                var script = document.createElement('script');
-                script.src = 'data:text/javascript;base64,' + btoa('
-                    ' + ${extractSongs.toString()} + '
-                    ' + ${extractSongData.toString()} + '
-                    ' + ${displayResults.toString()} + '
-                    ' + ${copyAllSongs.toString()} + '
-                    ' + ${getProfileName.toString()} + '
-                    extractSongs();
-                ');
-                document.head.appendChild(script);
-            })();`;
+            const statusDiv = document.getElementById('status') || document.createElement('div');
+            if (!statusDiv.id) statusDiv.id = 'status';
             
+            // Combine all necessary functions into a single script
+            const scriptContent = `
+                ${extractSongs.toString()}
+                ${extractSongData.toString()}
+                ${displayResults.toString()}
+                ${copyAllSongs.toString()}
+                ${getProfileName.toString()}
+                (function() {
+                    // Remove existing container if present
+                    let existing = document.getElementById('tiktokSongExtractor');
+                    if (existing) existing.remove();
+                    
+                    // Create a container for the results
+                    let container = document.createElement('div');
+                    container.id = 'tiktokSongExtractor';
+                    container.style.position = 'fixed';
+                    container.style.top = '20px';
+                    container.style.right = '20px';
+                    container.style.zIndex = '9999';
+                    container.style.background = 'white';
+                    container.style.padding = '20px';
+                    container.style.borderRadius = '10px';
+                    container.style.boxShadow = '0 0 10px rgba(0,0,0,0.3)';
+                    container.style.maxWidth = '400px';
+                    container.style.maxHeight = '80vh';
+                    container.style.overflowY = 'auto';
+                    container.style.fontFamily = 'Arial, sans-serif';
+                    container.innerHTML = '<h3 style="margin-top:0;color:#333;">TikTok Song Extractor</h3><div id="status"></div><div id="results" style="display:none;"><div id="stats"></div><h4 style="color:#333;">Found Songs:</h4><div id="songList"></div></div>';
+                    document.body.appendChild(container);
+                    extractSongs();
+                })();
+            `;
+            
+            // Create the bookmarklet
+            let bookmarklet;
+            try {
+                bookmarklet = `javascript:(function(){
+                    var script = document.createElement('script');
+                    script.src = 'data:text/javascript;base64,${btoa(unescape(encodeURIComponent(scriptContent)))}';
+                    document.head.appendChild(script);
+                })();`;
+            } catch (e) {
+                statusDiv.innerHTML = '<div class="error">❌ Failed to create bookmarklet: ' + e.message + '</div>';
+                return;
+            }
+
+            // Copy to clipboard
             navigator.clipboard.writeText(bookmarklet).then(() => {
-                document.getElementById('status').innerHTML = '<div class="success">✅ Bookmarklet copied! Drag it to your bookmarks bar for easy access.</div>';
+                statusDiv.innerHTML = '<div class="success">✅ Bookmarklet copied! Drag it to your bookmarks bar for easy access.</div>';
             }).catch(() => {
-                // Fallback for older browsers
                 const textArea = document.createElement('textarea');
                 textArea.value = bookmarklet;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
                 document.body.appendChild(textArea);
+                textArea.focus();
                 textArea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textArea);
-                document.getElementById('status').innerHTML = '<div class="success">✅ Bookmarklet copied! Drag it to your bookmarks bar for easy access.</div>';
+                statusDiv.innerHTML = '<div class="success">✅ Bookmarklet copied! Drag it to your bookmarks bar for easy access.</div>';
             });
         }
         
-        // Auto-detect if we're on TikTok and show appropriate message
+        // Auto-detect if we're on TikTok
         if (window.location.hostname.includes('tiktok.com')) {
             document.getElementById('status').innerHTML = '<div class="success">✅ You\'re on TikTok! Click "Extract Songs" to get started.</div>';
         } else {
