@@ -270,6 +270,7 @@
             <div class="button-group">
                 <button class="btn" onclick="extractSongs()">🎵 Extract Songs</button>
                 <button class="btn btn-secondary" onclick="copyBookmarklet()">📋 Copy Bookmarklet</button>
+                <button class="btn" id="copyAllBtn" onclick="copyAllSongs()" style="display: none;">📋 Copy All Songs</button>
             </div>
             
             <div id="status"></div>
@@ -375,6 +376,10 @@
             const resultsDiv = document.getElementById('results');
             const songListDiv = document.getElementById('songList');
             const statsDiv = document.getElementById('stats');
+            const copyAllBtn = document.getElementById('copyAllBtn');
+            
+            // Store songs globally for copying
+            window.extractedSongs = songs;
             
             // Display stats
             const totalSongs = songs.length;
@@ -407,7 +412,84 @@
                 </div>
             `).join('');
             
+            // Show copy all button
+            copyAllBtn.style.display = 'block';
             resultsDiv.classList.remove('hidden');
+        }
+        
+        function copyAllSongs() {
+            if (!window.extractedSongs || window.extractedSongs.length === 0) {
+                document.getElementById('status').innerHTML = '<div class="error">❌ No songs to copy! Extract songs first.</div>';
+                return;
+            }
+            
+            const songs = window.extractedSongs;
+            const profileName = getProfileName();
+            
+            // Create formatted text
+            let formattedText = `🎵 Songs from ${profileName} TikTok Profile\n`;
+            formattedText += `📊 Total: ${songs.length} unique songs\n`;
+            formattedText += `🎶 Total uses: ${songs.reduce((sum, song) => sum + song.count, 0)}\n\n`;
+            
+            // Add songs list
+            formattedText += '📋 Song List:\n';
+            formattedText += '='.repeat(50) + '\n';
+            
+            songs.forEach((song, index) => {
+                formattedText += `${index + 1}. ${song.name} - ${song.artist} (${song.count}x)\n`;
+            });
+            
+            // Add separator and alternative formats
+            formattedText += '\n' + '='.repeat(50) + '\n';
+            formattedText += '📝 Just Song Names:\n';
+            songs.forEach(song => {
+                formattedText += `• ${song.name}\n`;
+            });
+            
+            formattedText += '\n' + '='.repeat(50) + '\n';
+            formattedText += '🎤 Just Artists:\n';
+            const uniqueArtists = [...new Set(songs.map(song => song.artist))];
+            uniqueArtists.forEach(artist => {
+                formattedText += `• ${artist}\n`;
+            });
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(formattedText).then(() => {
+                document.getElementById('status').innerHTML = '<div class="success">✅ All songs copied to clipboard! You can paste them anywhere now.</div>';
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = formattedText;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                document.getElementById('status').innerHTML = '<div class="success">✅ All songs copied to clipboard! You can paste them anywhere now.</div>';
+            });
+        }
+        
+        function getProfileName() {
+            // Try to get profile name from URL or page
+            const url = window.location.href;
+            const match = url.match(/@([^\/\?]+)/);
+            if (match) {
+                return '@' + match[1];
+            }
+            
+            // Try to get from page title
+            const title = document.title;
+            if (title.includes('@')) {
+                const titleMatch = title.match(/@([^\s]+)/);
+                if (titleMatch) {
+                    return '@' + titleMatch[1];
+                }
+            }
+            
+            return 'this TikTok profile';
         }
         
         function copyBookmarklet() {
@@ -417,6 +499,8 @@
                     ${extractSongs.toString()}
                     ${extractSongData.toString()}
                     ${displayResults.toString()}
+                    ${copyAllSongs.toString()}
+                    ${getProfileName.toString()}
                     extractSongs();
                 \`);
                 document.head.appendChild(script);
