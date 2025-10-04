@@ -495,14 +495,14 @@
         function copyBookmarklet() {
             const bookmarklet = `javascript:(function(){
                 var script = document.createElement('script');
-                script.src = 'data:text/javascript;base64,' + btoa(\`
-                    ${extractSongs.toString()}
-                    ${extractSongData.toString()}
-                    ${displayResults.toString()}
-                    ${copyAllSongs.toString()}
-                    ${getProfileName.toString()}
+                script.src = 'data:text/javascript;base64,' + btoa('
+                    ' + ${extractSongs.toString()} + '
+                    ' + ${extractSongData.toString()} + '
+                    ' + ${displayResults.toString()} + '
+                    ' + ${copyAllSongs.toString()} + '
+                    ' + ${getProfileName.toString()} + '
                     extractSongs();
-                \`);
+                ');
                 document.head.appendChild(script);
             })();`;
             
